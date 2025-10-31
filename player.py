@@ -3,11 +3,17 @@ from constants import *
 from circleshape import CircleShape
 from shooting import Shot
 
+PLAYER_RADIUS = 20
+
 class Player(CircleShape):
     def __init__(self, x, y):
         super().__init__(x, y, PLAYER_RADIUS)
         self.rotation = 0
-        self.shoot_timer = 0  # cooldown timer starts at 0
+        self.shoot_timer = 0
+        self.invincible = False
+        self.invincibility_timer = 0
+        self.flicker_timer = 0
+        self.visible = True
 
     def triangle(self):
         forward = pygame.Vector2(0, 1).rotate(self.rotation)
@@ -18,7 +24,8 @@ class Player(CircleShape):
         return [a, b, c]
 
     def draw(self, screen):
-        pygame.draw.polygon(screen, "white", self.triangle(), 2)
+        if self.visible:
+            pygame.draw.polygon(screen, "white", self.triangle(), 2)
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
@@ -38,6 +45,17 @@ class Player(CircleShape):
         if (keys[pygame.K_SPACE] or keys[pygame.K_RETURN]) and self.shoot_timer <= 0:
             self.shoot()
 
+        # Handle invincibility flicker
+        if self.invincible:
+            self.invincibility_timer -= dt
+            self.flicker_timer -= dt
+            if self.flicker_timer <= 0:
+                self.flicker_timer = PLAYER_FLICKER_SPEED
+                self.visible = not self.visible
+            if self.invincibility_timer <= 0:
+                self.invincible = False
+                self.visible = True
+
     def rotate(self, dt):
         self.rotation += PLAYER_TURN_SPEED * dt
 
@@ -48,4 +66,10 @@ class Player(CircleShape):
     def shoot(self):
         shot = Shot(self.position.x, self.position.y)
         shot.velocity = pygame.Vector2(0, 1).rotate(self.rotation) * PLAYER_SHOOT_SPEED
-        self.shoot_timer = PLAYER_SHOOT_COOLDOWN  # reset timer after shooting
+        self.shoot_timer = PLAYER_SHOOT_COOLDOWN
+
+    def make_invincible(self):
+        self.invincible = True
+        self.invincibility_timer = PLAYER_INVINCIBILITY_TIME
+        self.flicker_timer = PLAYER_FLICKER_SPEED
+        self.visible = True
